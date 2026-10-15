@@ -1,0 +1,257 @@
+<!DOCTYPE html>
+<html lang="tr">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Uzayın Yeni Sahipleri | Veri Hikayesi</title>
+    <meta name="description" content="Ticari şirketlerin uzay yarışına katılmasıyla, Dünya yörüngesindeki aktif uydu yoğunluğu son 20 yılda nasıl değişti?">
+    
+    <script src="https://cdn.tailwindcss.com"></script>
+    <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+    <script src="https://unpkg.com/intersection-observer"></script>
+    <script src="https://unpkg.com/scrollama"></script>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/PapaParse/5.3.2/papaparse.min.js"></script>
+    <link href="https://fonts.googleapis.com/css2?family=Space+Grotesk:wght@300;400;600;700&family=Inter:wght@300;400;600&display=swap" rel="stylesheet">
+
+    <style>
+        /* === GERÇEK DERİN UZAY, NEBULA VE GEZEGEN ATMOSFERİ === */
+        body {
+            background-color: #010309;
+            /* Nebula ve derin uzay bulutu efektleri */
+            background-image: 
+                radial-gradient(circle at 10% 20%, rgba(56, 189, 248, 0.12) 0%, transparent 40%),
+                radial-gradient(circle at 90% 80%, rgba(129, 140, 248, 0.15) 0%, transparent 45%),
+                radial-gradient(circle at 50% 50%, rgba(15, 23, 42, 0.8) 0%, #010309 100%);
+            background-attachment: fixed;
+            color: #f8fafc;
+            overflow-x: hidden;
+            font-family: 'Inter', sans-serif;
+            margin: 0;
+            padding: 0;
+            position: relative;
+        }
+
+        /* Arka planda parlayan CSS Yıldızlar Katmanı */
+        .space-stars {
+            position: fixed;
+            top: 0; left: 0; width: 100vw; height: 100vh;
+            z-index: -10;
+            background-image: url("data:image/svg+xml,%3Csvg width='300' height='300' xmlns='http://www.w3.org/2000/svg'%3E%3Ccircle cx='30' cy='40' r='1' fill='%23ffffff' opacity='0.8'/%3E%3Ccircle cx='150' cy='80' r='1.5' fill='%2338bdf8' opacity='0.9'/%3E%3Ccircle cx='250' cy='200' r='1' fill='%23ffffff' opacity='0.5'/%3E%3Ccircle cx='80' cy='250' r='2' fill='%23ffffff' opacity='0.7'/%3E%3Ccircle cx='200' cy='40' r='1' fill='%23818cf8' opacity='0.9'/%3E%3Ccircle cx='280' cy='280' r='1.2' fill='%23ffffff' opacity='0.6'/%3E%3C/svg%3E");
+            background-repeat: repeat;
+            opacity: 0.8;
+        }
+
+        /* Sağ üst köşede devasa şık bir Gezegen ve Atmosfer Efekti */
+        .planet-bg {
+            position: fixed;
+            top: -150px;
+            right: -150px;
+            width: 450px;
+            height: 450px;
+            border-radius: 50%;
+            background: radial-gradient(circle at 30% 30%, #38bdf8, #1e1b4b 60%, #020617 100%);
+            box-shadow: inset -40px -40px 80px rgba(0,0,0,0.9), 0 0 60px rgba(56, 189, 248, 0.2);
+            z-index: -9;
+            opacity: 0.6;
+            pointer-events: none;
+        }
+
+        h1, h2, h3, h4 { 
+            font-family: 'Space Grotesk', sans-serif; 
+        }
+        
+        p { 
+            max-width: 65ch; 
+            line-height: 1.6; 
+        }
+
+        #scrolly { 
+            display: flex; 
+            max-width: 1300px; 
+            margin: 0 auto; 
+            gap: 4rem; 
+            padding: 2rem; 
+            position: relative;
+            z-index: 5;
+        }
+        
+        article { 
+            width: 35%; 
+            z-index: 10; 
+        }
+        
+        /* Sabit Grafik Alanı - Şık Cam ve Uzay Çerçevesi */
+        figure {
+            position: sticky; 
+            width: 65%; 
+            top: 15vh; 
+            height: 70vh; 
+            display: flex; 
+            align-items: center; 
+            justify-content: center;
+            background-color: rgba(11, 15, 25, 0.75); 
+            backdrop-filter: blur(8px);
+            -webkit-backdrop-filter: blur(8px);
+            border: 1px solid rgba(56, 189, 248, 0.25); 
+            border-radius: 1.25rem; 
+            padding: 2rem;
+            box-shadow: 0 25px 50px -12px rgba(0, 0, 0, 0.8), 0 0 30px rgba(56, 189, 248, 0.05);
+        }
+        
+        /* Metin Kutuları */
+        .step {
+            margin: 0 auto 85vh auto; 
+            padding: 2rem; 
+            background-color: rgba(15, 23, 42, 0.85); 
+            backdrop-filter: blur(6px);
+            -webkit-backdrop-filter: blur(6px);
+            border: 1px solid rgba(56, 189, 248, 0.2); 
+            border-left: 4px solid #38bdf8;
+            border-radius: 1rem; 
+            opacity: 0.3; 
+            transition: opacity 300ms ease-in-out, transform 300ms ease-in-out;
+        }
+        
+        .step.is-active { 
+            opacity: 1; 
+            border-left-color: #818cf8; 
+            box-shadow: 0 10px 30px -10px rgba(56, 189, 248, 0.3);
+        }
+
+        @media (prefers-reduced-motion: reduce) {
+            .step { transition: none; }
+        }
+
+        @media (max-width: 768px) {
+            #scrolly { flex-direction: column; gap: 1rem; padding: 1rem; }
+            figure { position: sticky; top: 0; width: 100%; height: 45vh; z-index: 0; border-radius: 0; border-bottom: 1px solid rgba(56, 189, 248, 0.2); }
+            article { width: 100%; padding-top: 2rem; }
+            .step { margin: 0 auto 70vh auto; }
+        }
+    </style>
+</head>
+<body>
+
+    <!-- Arka Plan Uzay Efektleri -->
+    <div class="space-stars"></div>
+    <div class="planet-bg"></div>
+
+    <!-- 1. AÇILIŞ (HERO) -->
+    <header class="min-h-screen flex flex-col items-center justify-center text-center px-4 relative">
+        <div class="absolute inset-0 flex items-center justify-center opacity-15 pointer-events-none">
+            <div class="w-[600px] h-[600px] rounded-full bg-sky-500 blur-[150px]"></div>
+        </div>
+        <h1 class="text-5xl md:text-7xl font-bold mb-6 text-transparent bg-clip-text bg-gradient-to-r from-sky-300 via-indigo-200 to-purple-400 tracking-tight">Uzayın Yeni Sahipleri</h1>
+        <h2 class="text-2xl md:text-3xl font-light mb-8 text-slate-200">Şirketler Yörüngeyi Nasıl Ele Geçirdi?</h2>
+        <div class="inline-flex items-center gap-3 px-6 py-2.5 rounded-full bg-slate-900/90 border border-sky-500/40 mb-12 text-sm font-mono text-sky-300 shadow-xl backdrop-blur-md">
+            <span class="w-2.5 h-2.5 rounded-full bg-sky-400 animate-pulse shadow-[0_0_10px_#38bdf8]"></span>
+            Yazan: Bengisu Küçük | 16 Ekim 2026
+        </div>
+        <div class="absolute bottom-10 animate-bounce">
+            <p class="text-xs uppercase tracking-[0.25em] text-sky-300/70 mb-2 font-semibold">Keşfe Başla</p>
+            <svg class="w-6 h-6 mx-auto text-sky-400" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 14l-7 7m0 0l-7-7m7 7V3"></path></svg>
+        </div>
+    </header>
+
+    <!-- 2. BAĞLAM -->
+    <section class="max-w-3xl mx-auto py-24 px-6 relative z-10">
+        <div class="border-l-4 border-sky-400 pl-8 space-y-6 bg-slate-900/60 p-8 rounded-r-2xl border border-slate-800/80 backdrop-blur-md shadow-xl">
+            <p class="text-xl font-light text-slate-100">60 yıl boyunca uzay, devletlerin milyarlarca dolarlık bütçelerle teknolojik gövde gösterisi yaptığı özel bir alandı.</p>
+            <p class="text-lg text-slate-300">Ancak Union of Concerned Scientists (UCS) verileri, Dünya yörüngesindeki trafiğin karakter değiştirdiğini gösteriyor. Gökyüzündeki yeni komşularımız artık devletler değil.</p>
+        </div>
+    </section>
+
+    <!-- 3. SCROLLYTELLING (6 Adım) -->
+    <main>
+        <section id="scrolly">
+            <article>
+                <div class="step" data-step="0">
+                    <h3 class="text-2xl font-bold mb-3 text-sky-300">Sakin Yıllar (2014-2019)</h3>
+                    <p class="text-base text-slate-300">Yakın geçmişe kadar yörüngeye fırlatılan uydu sayısı yılda ortalama 100 ile 300 bandında seyrediyor ve gökyüzü sessizliğini koruyordu.</p>
+                </div>
+                <div class="step" data-step="1">
+                    <h3 class="text-2xl font-bold mb-3 text-sky-300">2020 Sonrası Patlama</h3>
+                    <p class="text-base text-slate-300">Ancak 2020 yılından itibaren grafik dik bir ivmeyle yukarı tırmanmaya başladı. <strong class="text-white">Fırlatılan uydu sayısı katlanarak arttı.</strong></p>
+                </div>
+                <div class="step" data-step="2">
+                    <h3 class="text-2xl font-bold mb-3 text-indigo-300">Yeni Sahipler: Şirketler</h3>
+                    <p class="text-base text-slate-300">Veriyi türüne göre ayırdığımızda asıl gerçek ortaya çıkıyor. Bu devasa artışın arkasında devletler değil, uzayı ticari bir pazar haline getiren şirketler var.</p>
+                </div>
+                <div class="step" data-step="3">
+                    <h3 class="text-2xl font-bold mb-3 text-indigo-300">Ticari Hakimiyet</h3>
+                    <p class="text-base text-slate-300">Özellikle küresel internet sağlama hedefi taşıyan devasa uydu takımyıldızları, grafiğin ticari kısmını inanılmaz boyutlara taşıdı.</p>
+                </div>
+                <div class="step" data-step="4">
+                    <h3 class="text-2xl font-bold mb-3 text-slate-400">Durağan Kalan Devletler</h3>
+                    <p class="text-base text-slate-300">Buna karşın sivil ve askeri (devlet) uydu fırlatmaları son 10 yılda neredeyse hiç artmadı. Eski güç dengesi tamamen değişti.</p>
+                </div>
+                <div class="step" data-step="5">
+                    <h3 class="text-2xl font-bold mb-3 text-rose-400">2022: Zirve Noktası</h3>
+                    <p class="text-base text-slate-300">Sadece 2022 yılında <strong class="text-white">2.013 adet</strong> ticari uydu fırlatılarak tüm zamanların en yüksek rakamına ulaşıldı.</p>
+                </div>
+            </article>
+
+            <figure>
+                <div class="w-full h-full relative">
+                    <canvas id="myChart" aria-label="Uydu sayılarının yıllara göre değişimi"></canvas>
+                    <p class="absolute bottom-[-1.5rem] right-0 text-xs text-slate-400 font-mono">Kaynak: UCS Satellite Database</p>
+                </div>
+            </figure>
+        </section>
+    </main>
+
+    <!-- 4. OKUYUCU KEŞFİ -->
+    <section class="max-w-4xl mx-auto py-32 px-6 relative z-10">
+        <h3 class="text-3xl font-bold mb-6 text-center text-sky-300">Kendin Keşfet: Yıllara Göre Dağılım</h3>
+        <p class="text-center mb-10 text-slate-300 mx-auto">Aşağıdaki menüden yılı seçerek o yıl fırlatılan uyduların ticari ve diğer amaçlar arasındaki oransal dağılımını incele.</p>
+        
+        <div class="flex flex-col md:flex-row items-center justify-center gap-12 bg-slate-950/80 p-10 rounded-2xl border border-sky-500/30 shadow-2xl backdrop-blur-md">
+            <div>
+                <label for="yearSelect" class="block text-sm font-medium text-sky-200 mb-3">Fırlatma Yılını Seçin:</label>
+                <select id="yearSelect" class="bg-slate-900 border border-sky-500/50 text-white rounded-lg p-3 w-48 focus:border-sky-400 focus:ring-1 focus:ring-sky-400 outline-none cursor-pointer">
+                    <option value="2014">2014</option>
+                    <option value="2018">2018</option>
+                    <option value="2020">2020</option>
+                    <option value="2022" selected>2022</option>
+                    <option value="2023">2023</option>
+                </select>
+            </div>
+            <div class="w-64 h-64 relative">
+                <canvas id="interactiveChart" aria-label="Seçilen yıla ait pasta grafik"></canvas>
+            </div>
+        </div>
+    </section>
+
+    <!-- 5. SONUÇ -->
+    <section class="max-w-3xl mx-auto py-20 px-6 border-t border-slate-800/80 relative z-10 bg-slate-950/40 backdrop-blur-sm">
+        <h3 class="text-3xl font-bold mb-6 text-slate-100">Peki Ne Olmuş?</h3>
+        <p class="text-base text-slate-300 mb-6">Veriler, uzayın artık bir "devlet meselesi" olmaktan çıkıp trilyon dolarlık bir "şirket ekosistemine" dönüştüğünü açıkça kanıtlıyor. Şirketler, binlerce ucuz ve küçük uyduyu yörüngeye diziyor.</p>
+        <p class="text-base text-slate-300">Ancak bu ticarileşme büyük bir soruyu beraberinde getiriyor: <strong class="text-rose-400">Uzay Çöplüğü.</strong> Görev süresi dolan veya arızalanan bu binlerce ticari uydu, yörünge kapasitesini zorluyor. <em class="text-sky-300/80">(Yörünge kapasitesi, uyduların birbirine çarpmadan güvenle faaliyet gösterebileceği fiziksel alan sınırıdır.)</em> Önümüzdeki 10 yılın en kritik tartışması bu alanın nasıl yönetileceği olacak.</p>
+    </section>
+
+    <!-- 6 & 7. YÖNTEM VE YAZAR -->
+    <footer class="bg-black/90 py-16 px-6 border-t border-slate-800/80 relative z-10 backdrop-blur-xl">
+        <div class="max-w-4xl mx-auto grid md:grid-cols-2 gap-16">
+            <div>
+                <h4 class="text-lg font-bold mb-4 text-sky-400">Yöntem & Veri</h4>
+                <ul class="text-sm text-slate-400 space-y-3">
+                    <li><strong>Kaynak:</strong> UCS Satellite Database (Mayıs 2023 Sürümü)</li>
+                    <li><strong>Araçlar:</strong> Python (Pandas), Chart.js, Scrollama.js, Tailwind CSS</li>
+                    <li><strong>Yapay Zeka Beyanı:</strong> Kod yazımı, hata ayıklama ve tasarım şablonları için AI araçlarından destek alınmıştır. Analiz kurgusu ve metinler özgündür.</li>
+                </ul>
+            </div>
+            <div>
+                <h4 class="text-lg font-bold mb-4 text-indigo-400">Yazar</h4>
+                <p class="text-sm text-slate-300 mb-6"><strong>Bengisu Küçük</strong><br>Manisa Celal Bayar Üniversitesi<br>Büyük Veri Analistliği Öğrencisi</p>
+                <div class="flex flex-wrap gap-4">
+                    <a href="https://bengisu-portfolio-git-main-odin02.vercel.app/" target="_blank" rel="noopener noreferrer" class="text-sm font-medium text-sky-300 border border-sky-800/60 px-4 py-2 rounded-lg hover:bg-sky-900/30 transition-colors">Portfolyomu İncele</a>
+                    <a href="https://github.com/odin02" target="_blank" rel="noopener noreferrer" class="text-sm font-medium text-slate-300 border border-slate-700 px-4 py-2 rounded-lg hover:bg-slate-800 transition-colors">GitHub (@odin02)</a>
+                    <a href="https://www.linkedin.com/in/bengisukucuk/" target="_blank" rel="noopener noreferrer" class="text-sm font-medium text-indigo-300 border border-indigo-900/60 px-4 py-2 rounded-lg hover:bg-indigo-900/30 transition-colors">LinkedIn</a>
+                </div>
+            </div>
+        </div>
+    </footer>
+
+    <script src="js/main.js"></script>
+</body>
+</html>
