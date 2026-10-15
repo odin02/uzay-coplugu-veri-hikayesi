@@ -2,7 +2,7 @@
 
 Bu proje, Manisa Celal Bayar Üniversitesi Büyük Veri Analistliği programı "Kullanıcı Arayüzü Tasarımı" dersi kapsamında hazırlanmış interaktif bir veri hikâyesi (scrollytelling) çalışmasıdır. Proje, Dünya yörüngesindeki ticari uydu artışını ve uzay çöplüğü tehlikesini incelemektedir.
 
-**Canlı Site Bağlantısı:** [Vercel linkimizi yayına alınca buraya ekleyeceğiz]
+**Canlı Site Bağlantısı:** [(https://uzay-coplugu-veri-hikayesi-site.vercel.app/)]
 
 ## Veri Kaynağı ve Lisans
 * **Kaynak:** Union of Concerned Scientists (UCS) Satellite Database (Mayıs 2023 sürümü).
